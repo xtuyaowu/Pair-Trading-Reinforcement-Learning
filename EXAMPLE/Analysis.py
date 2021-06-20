@@ -12,11 +12,18 @@ sns.set(style='white')
 
 # Retrieve intraday price data and combine them into a DataFrame.
 # 1. Load downloaded prices from folder into a list of dataframes.
-folder_path = 'STATICS/PRICE'
+#folder_path = 'STATICS/PRICE'
+folder_path = '../STATICS/S&P500Top20'
+
+curr_sector = 'InformationTechnology'
+#curr_sector = 'HealthCare'
+folder_path = '../STATICS/S&P500/' + curr_sector
+
 file_names  = os.listdir(folder_path)
 tickers     = [name.split('.')[0] for name in file_names]
-df_list     = [pd.read_csv(os.path.join('STATICS/PRICE', name)) for name in file_names]
-
+#df_list     = [pd.read_csv(os.path.join('STATICS/PRICE', name)) for name in file_names]
+df_list     = [pd.read_csv(os.path.join(folder_path, name)) for name in file_names]
+#df_list = df_list[0:50]
 # 2. Replace the closing price column name by the ticker.
 for i in range(len(df_list)):
     df_list[i].rename(columns={'close': tickers[i]}, inplace=True)
@@ -26,47 +33,78 @@ df  = reduce(lambda x, y: pd.merge(x, y, on='date'), df_list)
 idx = round(len(df) * 0.7)
 df  = df.iloc[:idx, :]
 
-
 # Calculate and plot price correlations.
-pearson_corr  = df[tickers].corr()
-sns.clustermap(pearson_corr).fig.suptitle('Pearson Correlations')
+#pearson_corr  = df[tickers].corr()
+#sns.clustermap(pearson_corr).fig.suptitle('Pearson Correlations')
+#sns.clustermap(pearson_corr, vmin=-1, vmax=1, xticklabels=True, yticklabels=True).fig.suptitle('Pearson Correlations')
+
+# https://stackoverflow.com/questions/29294983/how-to-calculate-correlation-between-all-columns-and-remove-highly-correlated-on
+col_corr = set() # Set of all the names of deleted columns
+def correlation(dataset, threshold):
+    #col_corr = set() # Set of all the names of deleted columns
+    corr_matrix = dataset.corr()
+    for i in range(len(corr_matrix.columns)):
+        for j in range(i):
+            #if (corr_matrix.iloc[i, j] >= threshold) and (corr_matrix.columns[j] not in col_corr):
+            if (abs(corr_matrix.iloc[i, j]) <= threshold) and (corr_matrix.columns[j] not in col_corr):
+                colname = corr_matrix.columns[i] # getting the name of column
+                col_corr.add(colname)
+                if colname in dataset.columns:
+                    del dataset[colname] # deleting the column from the dataset
+    return dataset
+threshold = 0.7
+df = correlation(df, threshold)
+print(len(df.columns))
+pearson_corr  = df.corr()
+
+cg = sns.clustermap(pearson_corr, vmin=threshold, vmax=1, xticklabels=True, yticklabels=True, figsize=(10,10))
+#cg.ax_row_dendrogram.set_visible(False)
+#cg.cax.set_visible(False)
 
 
+plt.tight_layout()
 
 # Plot the marginal distributions.
-sns.set(style='darkgrid')
-sns.jointplot(df['JNJ'], df['PG'],  kind='hex', color='#2874A6')
-sns.jointplot(df['KO'],  df['PEP'], kind='hex', color='#2C3E50')
 
+sns.set(style='darkgrid')
+#sns.jointplot(df['CRM'], df['FIS'],  kind='hex', color='#2874A6')
+#sns.jointplot(df['IBM'],  df['CTSH'], kind='hex', color='#2C3E50')
+# 'IQV', 'SYK' 
+#selected_pairs = ['IQV', 'SYK']
+selected_pairs = ['V', 'MA']
+sns.jointplot(df[selected_pairs[0]], df[selected_pairs[1]],  kind='hex', color='#2874A6')
+
+
+# plt.show()
 
 # Calculate the p-value of cointegration test for JNJ-PG and KO-PEP pairs.
-x = df['JNJ']
-y = df['PG']
+x = df['CRM']
+y = df['FIS']
 _, p_value, _ = coint(x, y)
-print('The p_value of JNJ-PG pair cointegration is: {}'.format(p_value))
+print('The p_value of CRM-FIS pair cointegration is: {}'.format(p_value))
 
-x = df['KO']
-y = df['PEP']
+x = df['IBM']
+y = df['CTSH']
 _, p_value, _ = coint(x, y)
-print('The p_value of KO-PEG pair cointegration is: {}'.format(p_value))
+print('The p_value of IBM-CTSH pair cointegration is: {}'.format(p_value))
 
 
-# Plot the linear relationship of the JNJ-PG pair.
-df2 = df[['JNJ', 'PG']].copy()
-spread = df2['JNJ'] - df2['PG']
+# Plot the linear relationship of the CRM-FIS pair.
+df2 = df[['CRM', 'FIS']].copy()
+spread = df2['CRM'] - df2['FIS']
 mean_spread = spread.mean()
 df2['Dev'] = spread - mean_spread
 rnd = np.random.choice(len(df), size=500)
-sns.scatterplot(x='JNJ', y='PG', hue='Dev', linewidth=0.3, alpha=0.8,
+sns.scatterplot(x='CRM', y='FIS', hue='Dev', linewidth=0.3, alpha=0.8,
                 data=df2.iloc[rnd, :]).set_title('JNJ-PG Price Relationship')
 
-# Plot the linear relationship of the KO-PEP pair.
-df2 = df[['KO', 'PEP']].copy()
-spread = df2['KO'] - df2['PEP']
+# Plot the linear relationship of the IBM-CTSH pair.
+df2 = df[['IBM', 'CTSH']].copy()
+spread = df2['IBM'] - df2['CTSH']
 mean_spread = spread.mean()
 df2['Dev'] = spread - mean_spread
 rnd = np.random.choice(len(df), size=500)
-sns.scatterplot(x='KO', y='PEP', hue='Dev', linewidth=0.3, alpha=0.8,
+sns.scatterplot(x='IBM', y='CTSH', hue='Dev', linewidth=0.3, alpha=0.8,
                 data=df2.iloc[rnd, :]).set_title('KO-PEP Price Relationship')
 
 
@@ -104,10 +142,10 @@ def plot_spread(df, ticker1, ticker2, idx, th, stop):
     ax[1].legend(loc='upper left', labels=['Spread', 'sell_th', 'buy_th', 'sell_stop', 'buy_stop'], prop={'size':6.5})
 
 idx = range(11000, 12000)
-plot_spread(df, 'JNJ', 'PG', idx, 0.5, 1)
+plot_spread(df, 'CRM', 'FIS', idx, 0.5, 1)
 
 idx = range(13000, 14000)
-plot_spread(df, 'KO', 'PEP', idx, 0.5, 1)
+plot_spread(df, 'IBM', 'CTSH', idx, 0.5, 1)
 
 
 # Generate correlated time-series.
@@ -142,3 +180,5 @@ df_gbm['price1'] = price1
 df_gbm['price2'] = price2
 idx = range(1000)
 plot_spread(df_gbm, 'price1', 'price2', idx, 0.5, 1)
+
+plt.show()
