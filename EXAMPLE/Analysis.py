@@ -7,6 +7,7 @@ import os
 from functools import reduce
 from statsmodels.tsa.stattools import coint
 
+############### 一、pearson_corr  begin
 
 sns.set(style='white')
 
@@ -14,24 +15,26 @@ sns.set(style='white')
 # 1. Load downloaded prices from folder into a list of dataframes.
 #folder_path = 'STATICS/PRICE'
 folder_path = '../STATICS/S&P500Top20'
-
 curr_sector = 'InformationTechnology'
 #curr_sector = 'HealthCare'
 folder_path = '../STATICS/S&P500/' + curr_sector
-
 file_names  = os.listdir(folder_path)
 tickers     = [name.split('.')[0] for name in file_names]
 #df_list     = [pd.read_csv(os.path.join('STATICS/PRICE', name)) for name in file_names]
 df_list     = [pd.read_csv(os.path.join(folder_path, name)) for name in file_names]
 #df_list = df_list[0:50]
+
+
 # 2. Replace the closing price column name by the ticker.
 for i in range(len(df_list)):
     df_list[i].rename(columns={'close': tickers[i]}, inplace=True)
+
 
 # 3. Merge all price dataframes. Extract roughly the first 70% data.
 df  = reduce(lambda x, y: pd.merge(x, y, on='date'), df_list)
 idx = round(len(df) * 0.7)
 df  = df.iloc[:idx, :]
+
 
 # Calculate and plot price correlations.
 #pearson_corr  = df[tickers].corr()
@@ -60,24 +63,29 @@ pearson_corr  = df.corr()
 cg = sns.clustermap(pearson_corr, vmin=threshold, vmax=1, xticklabels=True, yticklabels=True, figsize=(10,10))
 #cg.ax_row_dendrogram.set_visible(False)
 #cg.cax.set_visible(False)
-
-
 plt.tight_layout()
 
-# Plot the marginal distributions.
+############### pearson_corr  end
+
+
+
+
+############### 二、Plot the marginal distributions. begin
 
 sns.set(style='darkgrid')
-#sns.jointplot(df['CRM'], df['FIS'],  kind='hex', color='#2874A6')
-#sns.jointplot(df['IBM'],  df['CTSH'], kind='hex', color='#2C3E50')
+sns.jointplot(df['CRM'], df['FIS'],  kind='hex', color='#2874A6')
+sns.jointplot(df['IBM'],  df['CTSH'], kind='hex', color='#2C3E50')
 # 'IQV', 'SYK' 
 #selected_pairs = ['IQV', 'SYK']
-selected_pairs = ['V', 'MA']
-sns.jointplot(df[selected_pairs[0]], df[selected_pairs[1]],  kind='hex', color='#2874A6')
+# selected_pairs = ['V', 'MA']
+# sns.jointplot(df[selected_pairs[0]], df[selected_pairs[1]],  kind='hex', color='#2874A6')
+
+############### Plot the marginal distributions. end
 
 
-# plt.show()
 
-# Calculate the p-value of cointegration test for JNJ-PG and KO-PEP pairs.
+
+############### 三、Calculate the p-value of cointegration test for JNJ-PG and KO-PEP pairs. begin
 x = df['CRM']
 y = df['FIS']
 _, p_value, _ = coint(x, y)
@@ -88,7 +96,10 @@ y = df['CTSH']
 _, p_value, _ = coint(x, y)
 print('The p_value of IBM-CTSH pair cointegration is: {}'.format(p_value))
 
+############### Calculate the p-value of cointegration test for JNJ-PG and KO-PEP pairs. end
 
+
+############### 四、Plot the linear relationship of the CRM-FIS pairs begin
 # Plot the linear relationship of the CRM-FIS pair.
 df2 = df[['CRM', 'FIS']].copy()
 spread = df2['CRM'] - df2['FIS']
@@ -106,8 +117,6 @@ df2['Dev'] = spread - mean_spread
 rnd = np.random.choice(len(df), size=500)
 sns.scatterplot(x='IBM', y='CTSH', hue='Dev', linewidth=0.3, alpha=0.8,
                 data=df2.iloc[rnd, :]).set_title('KO-PEP Price Relationship')
-
-
 
 # Plot the historical JNJ-PG prices and the spreads for a sample period.
 def plot_spread(df, ticker1, ticker2, idx, th, stop):
@@ -146,9 +155,10 @@ plot_spread(df, 'CRM', 'FIS', idx, 0.5, 1)
 
 idx = range(13000, 14000)
 plot_spread(df, 'IBM', 'CTSH', idx, 0.5, 1)
+############### Plot the linear relationship of the CRM-FIS pairs end
 
 
-# Generate correlated time-series.
+############### 五、Generate correlated time-series.begin
 # 1. Simulate 1000 correlated random variables by Cholesky Decomposition.
 corr = np.array([[1.0, 0.9],
                  [0.9, 1.0]])
@@ -174,11 +184,16 @@ print('GBM simulation result - return correlation: {}'.format(corr_ret))
 print('GBM simulation result - price correlation: {}'.format(corr_price))
 print('GBM simulation result - p-value for cointegration testing: {}'.format(p_value))
 
+############### Generate correlated time-series.end
+
+
+############### 六、Plot the results begin
 # 4. Plot the results.
 df_gbm = pd.DataFrame()
 df_gbm['price1'] = price1
 df_gbm['price2'] = price2
 idx = range(1000)
 plot_spread(df_gbm, 'price1', 'price2', idx, 0.5, 1)
+############### 六、Plot the results end
 
 plt.show()
