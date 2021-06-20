@@ -44,6 +44,9 @@ idx_test  = list(range(train_len, len(x)))
 EG_Train = EGCointegration(x.iloc[idx_train, :], y.iloc[idx_train, :], 'date', 'close')
 EG_Test  = EGCointegration(x.iloc[idx_test,  :], y.iloc[idx_test,  :], 'date', 'close')
 
+################################ implement_step_1_and_2.py
+
+
 # Create action space
 n_hist    = list(np.arange(60, 601, 60))
 n_forward = list(np.arange(120, 1201, 120))
@@ -66,6 +69,8 @@ n_state = len(states)
 # Assign state and action spaces to config
 config_train['StateSpaceState'] = states
 config_train['ActionSpaceAction'] = actions
+
+################################ implement_step_3
 
 # Create and build network
 one_hot  = {'one_hot': {'func_name':  'one_hot',
@@ -109,6 +114,8 @@ N.build_layers(layer_dict1)
 N.add_layer_duplicates(layer_dict2, 3)
 
 N.add_layer_duplicates(output_layer, 1)
+
+################################ implement_step_4.py
 
 if perform_training:
     # Create learning object and perform training
@@ -165,6 +172,8 @@ if perform_training:
     
     
     sess.close()
+
+################################ implement_step_5.py
 
 if back_testing:
     #action_dict = pd.read_excel('Results\opt_action_df.xlsx', index=False).to_dict()
@@ -294,4 +303,6 @@ if back_testing:
 
     print(pnl['PnL'].iloc[[-1]])
 
-print('datetime.now() - startTime = ', datetime.now() - startTime) 
+print('datetime.now() - startTime = ', datetime.now() - startTime)
+
+################################ implement_step_6.py
